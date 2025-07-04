@@ -50,28 +50,20 @@ curl http://localhost:5000/health
 - **POST** `/api/schedules/optimize` – Run optimization  
 - **GET** `/api/schedules/student/{id}` – Get student schedule  
 - **GET** `/api/schedules/metrics/{semester}` – View metrics  
-```
-```  
+ 
 ### 🏗 Architecture
 - Microservices architecture with REST API  
 - Constraint-based optimization using OR-Tools  
 - Horizontal scaling via Kubernetes HPA  
 - Redis caching for performance  
-```
-```  
+
 ### 📈 OR-Tools Implementation
 - **Binary decision variables**: `x[student, course]`  
 - **Constraints**: time conflicts, capacity, course load (3-5)  
 - **Objective**: maximize weighted preference satisfaction  
 - **Solver**: CP-SAT with 60-second timeout
-```
 
-```  
-### 🔗 Links
-- **Live Demo** (TBD)  
-- **API Documentation** (TBD)  
-- **Technical Blog Post** (TBD)  
-```
+
 ```  
 ### 📝 License
 MIT License
