@@ -30,3 +30,6 @@ Thumbs.db
 *.pem
 *.key
 *-secret.yaml
+*.pyc
+__pycache__/
+.DS_Store
