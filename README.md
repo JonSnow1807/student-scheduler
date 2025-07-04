@@ -92,6 +92,7 @@ curl -X POST http://localhost:5002/api/schedules/optimize \
   -H "Content-Type: application/json" \
   -d '{"semester": "Spring2024"}'
 
+```
 ## 🩺 Health Check
 
 ```bash
@@ -102,7 +103,7 @@ curl http://localhost:5002/health
 # Check database connection
 curl http://localhost:5002/ready
 # Expected: {"status": "ready"}
-
+```
 
 ## Core Endpoints
 
@@ -125,6 +126,7 @@ Content-Type: application/json
     "satisfaction_rate": 89.9
   }
 }
+```
 
 ### Get Student Schedule
 ```bash
@@ -142,6 +144,8 @@ GET /api/schedules/student/{student_id}
   },
   ...
 ]
+```
+
 ### View Optimization Metrics
 ```bash
 GET /api/schedules/metrics/{semester}
@@ -151,6 +155,7 @@ GET /api/schedules/metrics/{semester}
 # - Course utilization
 # - Conflict analysis
 # - Solver performance stats
+```
 
 ## 🏗 Architecture
 ```text
@@ -170,12 +175,13 @@ GET /api/schedules/metrics/{semester}
 │                 │                            │                 │
 └─────────────────┘                            └─────────────────┘
 
+```
 ## 📈 OR-Tools Implementation Details
 
 ### Decision Variables
 ```python
 x[s, c] = BoolVar()  # 1 if student s is assigned course c
-
+```
 ### Constraints
 ```python
 # Time conflicts
@@ -186,12 +192,12 @@ sum(x[s, c] for s in students) <= course.capacity
 
 # Student load
 3 <= sum(x[s, c] for c in courses) <= 5
-
+```
 ### Objective Function
 ```python
 maximize sum(weight[priority] * x[s, c] for all assignments)
 # where weight = {1: 10, 2: 6, 3: 3, 4: 1, 5: 0}
-
+```
 ## 🐳 Docker Configuration
 The application runs three containerized services:
 
@@ -207,7 +213,7 @@ web:
     - "5002:5000"
   environment:
     - DATABASE_URL=postgresql://postgres:password@db/student_scheduler
-
+```
 ## ☸️ Kubernetes Deployment
 Production-ready Kubernetes manifests included:
 
@@ -219,7 +225,7 @@ Production-ready Kubernetes manifests included:
 ```bash
 # Deploy to Kubernetes
 kubectl apply -f k8s/
-
+```
 # Check deployment status
 kubectl get pods -n production
 kubectl get svc  -n production
@@ -231,7 +237,7 @@ docker-compose exec web pytest tests/ -v
 
 # Run tests with coverage report
 docker-compose exec web pytest tests/ --cov=app --cov-report=html
-
+```
 ## 📋 Project Structure
 ```text
 student-scheduler/
@@ -247,7 +253,7 @@ student-scheduler/
 ├── Dockerfile               # Container definition
 ├── requirements.txt         # Python dependencies
 └── seed_data.py             # Test data generator
-
+```
 
 ## 🔍 Algorithm Insights
 - Explored **101,441** solution branches  
@@ -274,7 +280,7 @@ DATABASE_URL=postgresql://postgres:password@localhost/student_scheduler
 SECRET_KEY=your-secret-key-here
 REDIS_URL=redis://localhost:6379
 FLASK_ENV=development
-
+```
 
 ## 🤝 Contributing
 ```bash
@@ -286,7 +292,7 @@ git commit -m "Add some AmazingFeature"
 
 # Push to the branch
 git push origin feature/AmazingFeature
-
+```
 ## 📄 License
 This project is licensed under the **MIT License** – see the [LICENSE](LICENSE) file for details.
 
