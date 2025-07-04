@@ -1,0 +1,136 @@
+{
+    "conflict_analysis": {
+        "conflict_rate": 0.0,
+        "students_with_conflicts": 0
+    },
+    "course_load_distribution": {
+        "3": 210,
+        "4": 200,
+        "5": 90
+    },
+    "course_statistics": {
+        "Algorithms": {
+            "capacity": 150,
+            "demand": 206,
+            "demand_ratio": 1.37,
+            "enrolled": 150,
+            "utilization": 100.0
+        },
+        "Biology I": {
+            "capacity": 200,
+            "demand": 201,
+            "demand_ratio": 1.0,
+            "enrolled": 200,
+            "utilization": 100.0
+        },
+        "Calculus I": {
+            "capacity": 250,
+            "demand": 189,
+            "demand_ratio": 0.76,
+            "enrolled": 188,
+            "utilization": 75.2
+        },
+        "Chemistry I": {
+            "capacity": 200,
+            "demand": 204,
+            "demand_ratio": 1.02,
+            "enrolled": 200,
+            "utilization": 100.0
+        },
+        "Data Structures": {
+            "capacity": 200,
+            "demand": 212,
+            "demand_ratio": 1.06,
+            "enrolled": 151,
+            "utilization": 75.5
+        },
+        "English Composition": {
+            "capacity": 250,
+            "demand": 194,
+            "demand_ratio": 0.78,
+            "enrolled": 196,
+            "utilization": 78.4
+        },
+        "Introduction to Computer Science": {
+            "capacity": 250,
+            "demand": 213,
+            "demand_ratio": 0.85,
+            "enrolled": 250,
+            "utilization": 100.0
+        },
+        "Linear Algebra": {
+            "capacity": 150,
+            "demand": 195,
+            "demand_ratio": 1.3,
+            "enrolled": 148,
+            "utilization": 98.7
+        },
+        "Physics I": {
+            "capacity": 200,
+            "demand": 198,
+            "demand_ratio": 0.99,
+            "enrolled": 198,
+            "utilization": 99.0
+        },
+        "World History": {
+            "capacity": 200,
+            "demand": 199,
+            "demand_ratio": 0.99,
+            "enrolled": 199,
+            "utilization": 99.5
+        }
+    },
+    "satisfaction_analysis": {
+        "by_priority": {
+            "priority_1": {
+                "rate": 99.6,
+                "satisfied": 498,
+                "total": 500
+            },
+            "priority_2": {
+                "rate": 99.6,
+                "satisfied": 498,
+                "total": 500
+            },
+            "priority_3": {
+                "rate": 94.6,
+                "satisfied": 473,
+                "total": 500
+            },
+            "priority_4": {
+                "rate": 68.0,
+                "satisfied": 234,
+                "total": 344
+            },
+            "priority_5": {
+                "rate": 62.3,
+                "satisfied": 104,
+                "total": 167
+            }
+        },
+        "first_choice_success": {
+            "got_first": 498,
+            "no_first": 2
+        },
+        "unpreferred_assignments": 73
+    },
+    "solver_performance": {},
+    "summary": {
+        "avg_courses_per_student": 3.76,
+        "schedule_rate": 100.0,
+        "students_scheduled": 500,
+        "total_assignments": 1880,
+        "total_students": 500
+    },
+    "time_distribution": {
+        "Monday 08:00:00": 110,
+        "Monday 10:00:00": 178,
+        "Monday 13:00:00": 280,
+        "Monday 15:00:00": 237,
+        "Tuesday 08:00:00": 229,
+        "Tuesday 10:00:00": 255,
+        "Tuesday 13:00:00": 213,
+        "Tuesday 15:00:00": 298,
+        "Wednesday 10:00:00": 80
+    }
+}

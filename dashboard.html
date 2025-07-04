@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Student Scheduler Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .card { background: white; padding: 20px; margin: 20px 0; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
+        .stat-box { background: #f8f9fa; padding: 20px; border-radius: 8px; text-align: center; }
+        .stat-number { font-size: 36px; font-weight: bold; color: #2563eb; }
+        .stat-label { color: #6b7280; margin-top: 5px; }
+        button { background: #2563eb; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; }
+        button:hover { background: #1d4ed8; }
+        .chart-container { width: 100%; height: 300px; position: relative; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎓 Student Scheduler Dashboard</h1>
+        
+        <div class="card">
+            <h2>Quick Actions</h2>
+            <button onclick="runOptimization()">Run Optimization</button>
+            <button onclick="loadMetrics()">Refresh Metrics</button>
+        </div>
+        
+        <div class="card">
+            <h2>Key Metrics</h2>
+            <div class="stats" id="stats"></div>
+        </div>
+        
+        <div class="card">
+            <h2>Satisfaction by Priority</h2>
+            <div class="chart-container">
+                <canvas id="satisfactionChart"></canvas>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>Course Utilization</h2>
+            <div class="chart-container">
+                <canvas id="utilizationChart"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const API_BASE = 'http://localhost:5002/api';
+        
+        async function loadMetrics() {
+            const response = await fetch(`${API_BASE}/schedules/metrics/Spring2024`);
+            const data = await response.json();
+            
+            // Update stats
+            document.getElementById('stats').innerHTML = `
+                <div class="stat-box">
+                    <div class="stat-number">${data.summary.students_scheduled}</div>
+                    <div class="stat-label">Students Scheduled</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number">${data.summary.avg_courses_per_student}</div>
+                    <div class="stat-label">Avg Courses/Student</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number">${data.conflict_analysis.conflict_rate}%</div>
+                    <div class="stat-label">Conflict Rate</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number">${data.solver_performance.solve_time?.toFixed(1) || 'N/A'}s</div>
+                    <div class="stat-label">Solve Time</div>
+                </div>
+            `;
+            
+            // Update charts
+            updateSatisfactionChart(data.satisfaction_analysis.by_priority);
+            updateUtilizationChart(data.course_statistics);
+        }
+        
+        function updateSatisfactionChart(data) {
+            const ctx = document.getElementById('satisfactionChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Priority 1', 'Priority 2', 'Priority 3', 'Priority 4', 'Priority 5'],
+                    datasets: [{
+                        label: 'Satisfaction Rate (%)',
+                        data: [
+                            data.priority_1?.rate || 0,
+                            data.priority_2?.rate || 0,
+                            data.priority_3?.rate || 0,
+                            data.priority_4?.rate || 0,
+                            data.priority_5?.rate || 0
+                        ],
+                        backgroundColor: '#2563eb'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100
+                        }
+                    }
+                }
+            });
+        }
+        
+        function updateUtilizationChart(data) {
+            const courses = Object.keys(data);
+            const utilization = courses.map(c => data[c].utilization);
+            
+            const ctx = document.getElementById('utilizationChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'horizontalBar',
+                data: {
+                    labels: courses,
+                    datasets: [{
+                        label: 'Utilization (%)',
+                        data: utilization,
+                        backgroundColor: utilization.map(u => u >= 90 ? '#ef4444' : '#10b981')
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            max: 100
+                        }
+                    }
+                }
+            });
+        }
+        
+        async function runOptimization() {
+            if (confirm('Run optimization for 500 students? This may take up to 60 seconds.')) {
+                alert('Optimization started... Please wait.');
+                const response = await fetch(`${API_BASE}/schedules/optimize`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({semester: 'Spring2024'})
+                });
+                const result = await response.json();
+                alert(`Optimization complete! Scheduled ${result.schedules_created} courses.`);
+                loadMetrics();
+            }
+        }
+        
+        // Load metrics on page load
+        loadMetrics();
+    </script>
+</body>
+</html>

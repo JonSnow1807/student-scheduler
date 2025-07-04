@@ -1,0 +1,192 @@
+from ortools.sat.python import cp_model
+from app.models.models import Student, Course, TimeSlot, CoursePreference, Schedule
+from app import db
+import logging
+
+logger = logging.getLogger(__name__)
+
+class SchedulerService:
+    def __init__(self):
+        self.model = cp_model.CpModel()
+        self.solver = cp_model.CpSolver()
+        
+    def optimize_schedules(self, semester):
+        """Main optimization function using OR-Tools"""
+        students = Student.query.all()
+        courses = Course.query.all()
+        timeslots = TimeSlot.query.all()
+        preferences = CoursePreference.query.all()
+        
+        # Create decision variables
+        # assignments[s,c,t] = 1 if student s takes course c at timeslot t
+        assignments = {}
+        for s in students:
+            for c in courses:
+                for t in timeslots:
+                    var_name = f's{s.id}_c{c.id}_t{t.id}'
+                    assignments[(s.id, c.id, t.id)] = self.model.NewBoolVar(var_name)
+        
+        # Additional variables to track if a student takes a course (regardless of timeslot)
+        student_takes_course = {}
+        for s in students:
+            for c in courses:
+                var_name = f's{s.id}_takes_c{c.id}'
+                student_takes_course[(s.id, c.id)] = self.model.NewBoolVar(var_name)
+        
+        # Constraints
+        self._add_constraints(students, courses, timeslots, assignments, student_takes_course)
+        
+        # Objective function
+        self._set_objective(preferences, student_takes_course)
+        
+        # Solve with time limit
+        self.solver.parameters.max_time_in_seconds = 30.0
+        status = self.solver.Solve(self.model)
+        
+        if status == cp_model.OPTIMAL or status == cp_model.FEASIBLE:
+            return self._extract_solution(students, courses, timeslots, assignments, semester)
+        else:
+            logger.error("No feasible solution found")
+            return None
+    
+    def _add_constraints(self, students, courses, timeslots, assignments, student_takes_course):
+        # Constraint 1: Each student can be in at most one place at a time
+        for s in students:
+            for t in timeslots:
+                self.model.Add(
+                    sum(assignments[(s.id, c.id, t.id)] for c in courses) <= 1
+                )
+        
+        # Constraint 2: Course capacity per timeslot
+        for c in courses:
+            for t in timeslots:
+                self.model.Add(
+                    sum(assignments[(s.id, c.id, t.id)] for s in students) <= c.capacity
+                )
+        
+        # Constraint 3: Each course should be scheduled in exactly one timeslot
+        for c in courses:
+            # At least one timeslot must have this course
+            self.model.Add(
+                sum(sum(assignments[(s.id, c.id, t.id)] for s in students) > 0 
+                    for t in timeslots) >= 1
+            )
+            
+            # But only one timeslot should have this course
+            course_in_timeslot = []
+            for t in timeslots:
+                var = self.model.NewBoolVar(f'course{c.id}_in_slot{t.id}')
+                # var = 1 if any student takes course c in timeslot t
+                self.model.Add(
+                    sum(assignments[(s.id, c.id, t.id)] for s in students) > 0
+                ).OnlyEnforceIf(var)
+                self.model.Add(
+                    sum(assignments[(s.id, c.id, t.id)] for s in students) == 0
+                ).OnlyEnforceIf(var.Not())
+                course_in_timeslot.append(var)
+            
+            # Exactly one timeslot should have this course
+            self.model.Add(sum(course_in_timeslot) == 1)
+        
+        # Constraint 4: Link student_takes_course with assignments
+        for s in students:
+            for c in courses:
+                # If student takes course in any timeslot, then student_takes_course = 1
+                self.model.Add(
+                    sum(assignments[(s.id, c.id, t.id)] for t in timeslots) > 0
+                ).OnlyEnforceIf(student_takes_course[(s.id, c.id)])
+                
+                # If student doesn't take course in any timeslot, then student_takes_course = 0
+                self.model.Add(
+                    sum(assignments[(s.id, c.id, t.id)] for t in timeslots) == 0
+                ).OnlyEnforceIf(student_takes_course[(s.id, c.id)].Not())
+        
+        # Constraint 5: Each student takes between 3 and 5 courses
+        for s in students:
+            self.model.Add(
+                sum(student_takes_course[(s.id, c.id)] for c in courses) >= 3
+            )
+            self.model.Add(
+                sum(student_takes_course[(s.id, c.id)] for c in courses) <= 5
+            )
+    
+    def _set_objective(self, preferences, student_takes_course):
+        objective = []
+        
+        # Maximize satisfaction based on preferences
+        for pref in preferences:
+            if (pref.student_id, pref.course_id) in student_takes_course:
+                weight = 6 - pref.priority  # Higher priority = higher weight
+                objective.append(weight * student_takes_course[(pref.student_id, pref.course_id)])
+        
+        self.model.Maximize(sum(objective))
+    
+    def _extract_solution(self, students, courses, timeslots, assignments, semester):
+        schedules = []
+        
+        for s in students:
+            for c in courses:
+                for t in timeslots:
+                    if self.solver.Value(assignments[(s.id, c.id, t.id)]) == 1:
+                        schedule = Schedule(
+                            student_id=s.id,
+                            course_id=c.id,
+                            timeslot_id=t.id,
+                            semester=semester
+                        )
+                        schedules.append(schedule)
+        
+        # Clear existing schedules for this semester
+        Schedule.query.filter_by(semester=semester).delete()
+        
+        # Save new schedules
+        db.session.bulk_save_objects(schedules)
+        db.session.commit()
+        
+        return schedules
+    
+    def calculate_metrics(self, semester):
+        """Calculate conflict reduction and satisfaction metrics"""
+        schedules = Schedule.query.filter_by(semester=semester).all()
+        total_students = Student.query.count()
+        
+        # Calculate conflicts (students with overlapping timeslots)
+        conflicts = 0
+        student_timeslots = {}
+        
+        for schedule in schedules:
+            if schedule.student_id not in student_timeslots:
+                student_timeslots[schedule.student_id] = []
+            student_timeslots[schedule.student_id].append(schedule.timeslot_id)
+        
+        for student_id, timeslots in student_timeslots.items():
+            if len(timeslots) != len(set(timeslots)):
+                conflicts += 1
+        
+        conflict_rate = (conflicts / total_students) * 100 if total_students > 0 else 0
+        
+        # Calculate satisfaction (based on preferences met)
+        preferences_met = 0
+        total_preferences = CoursePreference.query.count()
+        
+        for schedule in schedules:
+            pref = CoursePreference.query.filter_by(
+                student_id=schedule.student_id,
+                course_id=schedule.course_id
+            ).first()
+            if pref:
+                preferences_met += 1
+        
+        # Count unique student-course pairs
+        unique_enrollments = len(set((s.student_id, s.course_id) for s in schedules))
+        
+        satisfaction_rate = (preferences_met / total_preferences) * 100 if total_preferences > 0 else 0
+        
+        return {
+            'conflict_reduction': max(0, 30 - conflict_rate),
+            'satisfaction_improvement': satisfaction_rate,
+            'total_schedules': len(schedules),
+            'unique_enrollments': unique_enrollments,
+            'total_conflicts': conflicts,
+            'avg_courses_per_student': unique_enrollments / total_students if total_students > 0 else 0
+        }

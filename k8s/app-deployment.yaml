@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: student-scheduler
+  namespace: student-scheduler
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: student-scheduler
+  template:
+    metadata:
+      labels:
+        app: student-scheduler
+    spec:
+      imagePullSecrets:
+      - name: oci-registry-secret
+      containers:
+      - name: web
+        image: iad.ocir.io/idhvqcqsmuyp/student-scheduler:latest  # UPDATE THIS WITH YOUR IMAGE URL
+        ports:
+        - containerPort: 5000
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: scheduler-secrets
+              key: DATABASE_URL
+        - name: SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: scheduler-secrets
+              key: SECRET_KEY
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: scheduler-secrets
+              key: REDIS_URL
+        - name: FLASK_ENV
+          value: "production"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 5000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 5000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: student-scheduler-service
+  namespace: student-scheduler
+  annotations:
+    service.beta.kubernetes.io/oci-load-balancer-shape: "flexible"
+    service.beta.kubernetes.io/oci-load-balancer-shape-flex-min: "10"
+    service.beta.kubernetes.io/oci-load-balancer-shape-flex-max: "100"
+spec:
+  type: LoadBalancer
+  selector:
+    app: student-scheduler
+  ports:
+  - port: 80
+    targetPort: 5000
+    protocol: TCP
