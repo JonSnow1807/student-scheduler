@@ -44,6 +44,7 @@ docker-compose exec web python seed_data.py
 
 # Health check
 curl http://localhost:5000/health
+```  
 
 ### API Endpoints
 - **POST** `/api/schedules/optimize` – Run optimization  
