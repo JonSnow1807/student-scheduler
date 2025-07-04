@@ -64,7 +64,5 @@ curl http://localhost:5000/health
 - **Solver**: CP-SAT with 60-second timeout
 
 
-```  
 ### 📝 License
 MIT License
-```  
